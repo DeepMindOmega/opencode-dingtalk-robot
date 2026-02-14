@@ -1,0 +1,31 @@
+# 敏感配置文件
+config.local.json
+sessions.json
+.env
+
+# Python缓存
+__pycache__/
+*.pyc
+*.pyo
+
+# 日志文件
+logs/
+*.log
+
+# 队列数据
+queue/
+
+# 临时文件
+*.tmp
+*.bak
+*.old
+*.working
+.DS_Store
+Thumbs.db
+*.swp
+
+# 测试图片
+media/*.png
+media/*.jpg
+media/*.jpeg
+media/*.gif
