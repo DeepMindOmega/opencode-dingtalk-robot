@@ -7,27 +7,33 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-sys.path.insert(0, "/home/admin/.opencode/skills/dingtalk-robot/src")
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, CURRENT_DIR)
 from queue_manager import QueueManager
 from session_manager import SessionManager
 
-CONFIG_DIR = "/home/admin/.opencode/skills/dingtalk-robot"
+CONFIG_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONFIG_PATH = os.path.join(CONFIG_DIR, "config.local.json")
 if not os.path.exists(CONFIG_PATH):
     CONFIG_PATH = os.path.join(CONFIG_DIR, "config.json")
-with open(CONFIG_PATH, "r") as f:
-    CONFIG = json.load(f)
+
+try:
+    with open(CONFIG_PATH, "r") as f:
+        CONFIG = json.load(f)
+except FileNotFoundError:
+    print(f"错误: 找不到配置文件 {CONFIG_PATH}")
+    sys.exit(1)
 
 qm = QueueManager(CONFIG["QUEUE_DIR"])
 sm = SessionManager(os.path.join(CONFIG_DIR, "sessions.json"))
-OPENCODE_BIN = "/home/admin/.npm-global/bin/opencode"
+OPENCODE_BIN = CONFIG.get("OPENCODE_BIN", "/home/admin/.npm-global/bin/opencode")
 
 print(f"配置文件: {CONFIG_PATH}")
 print(f"OpenCode路径: {OPENCODE_BIN}")
 
 
 def run_opencode(message, continue_session=False, images=None, timeout=120):
-    opencode_dir = "/home/admin/.local/share/opencode"
+    opencode_dir = CONFIG.get("OPENCODE_DATA_DIR", "/home/admin/.local/share/opencode")
     screenshots_before = set()
 
     if os.path.exists(opencode_dir):
@@ -50,6 +56,9 @@ def run_opencode(message, continue_session=False, images=None, timeout=120):
         )
         output = result.stdout if result.stdout else ""
         error = result.stderr if result.stderr else ""
+
+        if error:
+            print(f"    → OpenCode 错误输出: {error[:200]}")
 
         screenshots_after = set()
         if os.path.exists(opencode_dir):
@@ -74,17 +83,17 @@ def run_opencode(message, continue_session=False, images=None, timeout=120):
                     response_text.append(data.get("part", {}).get("text", ""))
                 if "sessionID" in data:
                     extracted_session_id = data["sessionID"]
-            except:
+            except json.JSONDecodeError:
                 pass
 
         response = "\n".join(response_text) if response_text else "无输出"
         return response, extracted_session_id, generated_images
     except subprocess.TimeoutExpired:
-        return "命令超时 (" + str(timeout) + "s)", None, []
+        return f"命令超时 ({timeout}s)", None, []
     except FileNotFoundError:
-        return "错误: 找不到 OpenCode: " + OPENCODE_BIN, None, []
+        return f"错误: 找不到 OpenCode: {OPENCODE_BIN}", None, []
     except Exception as e:
-        return "执行异常: " + str(e), None, []
+        return f"执行异常: {str(e)}", None, []
 
 
 def execute_shell(cmd, timeout=30, cwd="/home/admin"):

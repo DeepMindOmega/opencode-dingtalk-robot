@@ -5,5 +5,7 @@
     "your_dingtalk_user_id_here",
     "your_another_user_id_here"
   ],
-  "QUEUE_DIR": "/path/to/your/queue/directory"
+  "QUEUE_DIR": "/path/to/your/queue/directory",
+  "OPENCODE_BIN": "/home/admin/.npm-global/bin/opencode",
+  "OPENCODE_DATA_DIR": "/home/admin/.local/share/opencode"
 }

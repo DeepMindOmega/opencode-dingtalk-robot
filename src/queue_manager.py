@@ -27,7 +27,7 @@ class QueueManager:
         try:
             with open(path, "r", encoding="utf-8") as f:
                 return json.load(f)
-        except:
+        except (FileNotFoundError, json.JSONDecodeError, IOError) as e:
             return {}
 
     def _write_json(self, path: Path, data: dict):
@@ -105,6 +105,30 @@ class QueueManager:
         if task_id in results:
             del results[task_id]
             self._write_json(self.results_file, results)
+
+    def cleanup_old_tasks(self, hours: int = 24) -> int:
+        """清理超过指定小时的已完成任务"""
+        from datetime import timedelta
+
+        cutoff = datetime.now() - timedelta(hours=hours)
+        tasks = self._read_json(self.tasks_file)
+
+        to_delete = []
+        for task_id, task in tasks.items():
+            try:
+                if task.get("status") == "completed":
+                    completed_at = datetime.fromisoformat(task.get("completed_at", ""))
+                    if completed_at < cutoff:
+                        to_delete.append(task_id)
+            except (ValueError, TypeError):
+                pass
+
+        for task_id in to_delete:
+            del tasks[task_id]
+
+        if to_delete:
+            self._write_json(self.tasks_file, tasks)
+        return len(to_delete)
 
 
 if __name__ == "__main__":

@@ -24,7 +24,7 @@ class SessionManager:
         try:
             with open(self.sessions_file, "r", encoding="utf-8") as f:
                 return json.load(f)
-        except:
+        except (FileNotFoundError, json.JSONDecodeError, IOError) as e:
             return {}
 
     def _write(self, data: dict):
@@ -133,15 +133,20 @@ class SessionManager:
             self._write(sessions)
 
     def get_all_sessions(self) -> dict:
-        """
-        获取所有会话信息
-        """
         return self._read()
 
+    def get_session_stats(self) -> dict:
+        """获取会话统计信息"""
+        sessions = self._read()
+        private_count = sum(1 for k in sessions if k.startswith("user:"))
+        group_count = sum(1 for k in sessions if k.startswith("group:"))
+        return {
+            "total": len(sessions),
+            "private": private_count,
+            "group": group_count,
+        }
+
     def cleanup_old_sessions(self, days: int = 7):
-        """
-        清理超过指定天数的未使用会话
-        """
         from datetime import timedelta
 
         cutoff = datetime.now() - timedelta(days=days)
@@ -153,7 +158,7 @@ class SessionManager:
                 last_used = datetime.fromisoformat(data.get("last_used", ""))
                 if last_used < cutoff:
                     to_delete.append(key)
-            except:
+            except (ValueError, TypeError):
                 pass
 
         for key in to_delete:
